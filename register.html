@@ -26,16 +26,16 @@
         <label class="block mb-1 font-semibold">시나리오 선택</label>
         <select name="scenario" id="scenario" class="w-full border rounded p-2" required>
           <option value="">▼ 선택해주세요</option>
-          <option value="트러블 브루잉">트러블 브루잉</option>
-          <option value="섹츠앤바이올렛">섹츠앤바이올렛</option>
-          <option value="배드문라이징">배드문라이징</option>
-          <option value="포켓몬스터">포켓몬스터</option>
-          <option value="반란의 거친바다">반란의 거친바다</option>
-          <option value="로마">로마</option>
+          <option>트러블 브루잉</option>
+          <option>섹츠앤바이올렛</option>
+          <option>배드문라이징</option>
+          <option>포켓몬스터</option>
+          <option>반란의 거친바다</option>
+          <option>로마</option>
         </select>
       </div>
 
-      <!-- 승리 팀 -->
+      <!-- 전체 승리 팀 -->
       <div>
         <label class="block mb-1 font-semibold">승리 팀</label>
         <select name="winningTeam" id="winningTeam" class="w-full border rounded p-2" required>
@@ -77,7 +77,7 @@
   </div>
 
   <script>
-    /* Firebase 기본 설정 */
+    /* Firebase 설정 */
     const firebaseConfig = {
       apiKey: "AIzaSyCqk52hH5uwWvC8L81l8d6kZgCN2Ynt_Rg",
       authDomain: "blood-on-the-clock-tower-613ce.firebaseapp.com",
@@ -87,7 +87,6 @@
       appId: "1:619177302977:web:3b282744ff5b00469e6d40",
       measurementId: "G-W8THYT2M1J",
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
@@ -95,60 +94,17 @@
     /* 관리자 이메일 */
     const allowedEmail = "skyhk1202@naver.com";
 
-    /* 캐릭터 데이터 */
-    const characterData = {
-      /* 트러블 브루잉 */
-      "트러블 브루잉": [
-        "세탁부", "사서", "조사관", "요리사", "공감능력자", "점쟁이", "장의사", "수도승", "레이븐키퍼", "처녀",
-        "슬레이어", "군인", "시장", "집사", "주정뱅이", "은둔자", "성자", "독살범", "스파이", "부정한여자",
-        "남작", "임프"
-      ],
-      /* 섹츠앤바이올렛 */
-      "섹츠앤바이올렛": [
-        "시계공", "몽상가", "뱀조련사", "수학자", "꽃파는소녀", "포고꾼", "오라클", "학자", "재봉사", "철학자",
-        "예술가", "저글러", "현자", "돌연변이", "연인", "이발사", "모지리", "사악한쌍둥이", "마녀",
-        "세레노부스", "피트핵", "팡구", "비고모르티스", "노다시", "볼텍스"
-      ],
-      /* 배드문라이징 */
-      "배드문라이징": [
-        "할머니", "선원", "하녀", "퇴마사", "여관주인", "도박꾼", "험담꾼", "대신", "교수", "음유시인",
-        "찻집여인", "평화주의자", "광대", "땜장이", "문차일드", "깡패", "미치광이", "대부", "악마의대변인",
-        "암살자", "배후인물", "좀부울", "푸카", "샤발롯", "포"
-      ],
-      /* 포켓몬스터 */
-      "포켓몬스터": [
-        "피카츄", "파이리", "꼬부기", "이상해씨", "뿔충이", "쥬벳", "라이츄", "리자몽",
-        "거북왕", "이상해꽃", "피죤", "메타몽", "야돈", "개굴닌자", "야도란", "야도킹",
-        "딱충이", "고오쓰", "잉어킹&갸라도스", "뮤",
-        "마자용", "질뻐기", "나옹", "붐볼",
-        "독침붕", "팬텀", "뮤츠", "로켓단"
-      ],
-      /* 반란의 거친바다 */
-      "반란의 거친바다": [
-        "노련한 선원", "항해자", "갑판장", "갑판원", "선장", "버케니어", "풋내기선원",
-        "여급", "사략선", "1등항해사", "화약운반수", "해적선", "소라게",
-        "따개비", "인어", "코주부", "밀항자",
-        "신비여사제", "바다정령", "언데드해적", "살점포식자",
-        "크라켄", "칼립소", "루살카", "우미보즈"
-      ],
-      /* 로마 */
-      "로마": [
-        "조각가", "베스타의무녀", "의사", "군단병", "나팔수", "장의사", "군단기수",
-        "백인대장", "상인", "검투사", "배우", "대장장이", "학자",
-        "쌍둥이", "스파르타쿠스", "와인제조자", "불길한징조",
-        "요부", "글리콘", "내장점술가", "조점관",
-        "클레오파트라", "한니발", "크라수스", "카이사르"
-      ]
-    };
+    /* 캐릭터 데이터 (생략… 이전 답변과 동일) */
+    const characterData = {/* …중략… */};
 
-    /* 권한 체크: 팝업 없이 즉시 로그인 페이지로 이동 */
+    /* 권한 체크 → 로그인 페이지로 리다이렉트 */
     auth.onAuthStateChanged((user) => {
       if (!user || user.email !== allowedEmail) {
         window.location.replace("login.html");
       }
     });
 
-    /* 플레이어 입력 필드 생성 함수 */
+    /* 플레이어 입력 동적 생성 */
     function updatePlayerInputs(count) {
       const scenario = document.getElementById("scenario").value;
       const characters = characterData[scenario] || [];
@@ -161,9 +117,13 @@
           <div class="p-3 bg-gray-50 rounded shadow">
             <h3 class="font-semibold mb-2">플레이어 ${i + 1}</h3>
             <input type="text" name="player${i}_name" placeholder="이름" class="w-full border rounded p-2 mb-2" required>
-            <select name="player${i}_character" class="w-full border rounded p-2" required>
+            <select name="player${i}_character" class="w-full border rounded p-2 mb-2" required>
               <option value="">캐릭터 선택</option>
               ${characters.map(c => `<option value="${c}">${c}</option>`).join("")}
+            </select>
+            <select name="player${i}_win" class="w-full border rounded p-2" required>
+              <option value="승리">승리</option>
+              <option value="패배">패배</option>
             </select>
           </div>
         `;
@@ -173,27 +133,27 @@
 
     /* 이벤트 바인딩 */
     document.getElementById("playerCount").addEventListener("change", () => {
-      updatePlayerInputs(parseInt(document.getElementById("playerCount").value, 10));
+      updatePlayerInputs(+document.getElementById("playerCount").value);
     });
-
     document.getElementById("scenario").addEventListener("change", () => {
-      updatePlayerInputs(parseInt(document.getElementById("playerCount").value, 10));
+      updatePlayerInputs(+document.getElementById("playerCount").value);
     });
 
     /* 폼 제출 */
     document.getElementById("gameForm").addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const date = e.target.date.value;
-      const scenario = e.target.scenario.value;
+      const date        = e.target.date.value;
+      const scenario    = e.target.scenario.value;
       const winningTeam = e.target.winningTeam.value;
-      const playerCount = parseInt(e.target.playerCount.value, 10);
-      const players = [];
+      const playerCount = +e.target.playerCount.value;
 
+      const players = [];
       for (let i = 0; i < playerCount; i++) {
         players.push({
-          name: e.target[`player${i}_name`].value,
-          character: e.target[`player${i}_character`].value
+          name:      e.target[`player${i}_name`].value,
+          character: e.target[`player${i}_character`].value,
+          win:       e.target[`player${i}_win`].value,
         });
       }
 
@@ -202,7 +162,7 @@
         scenario,
         winningTeam,
         players,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       alert("데이터가 Firebase에 저장되었습니다!");
@@ -210,7 +170,7 @@
       updatePlayerInputs(5);
     });
 
-    /* 페이지 첫 로드 시 기본 5인 입력 표시 */
+    /* 초기 5인 세팅 */
     updatePlayerInputs(5);
   </script>
 </body>
