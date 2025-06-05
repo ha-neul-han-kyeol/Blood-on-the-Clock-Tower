@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>전체 통계</title>
+<title>전체 통계 (월·시나리오 필터)</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
@@ -12,6 +11,16 @@
   <div class="max-w-5xl mx-auto p-8">
     <h1 class="text-4xl font-extrabold text-center mb-8">📊 전체 통계</h1>
 
+    <!-- 월(달) 선택 -->
+    <div class="flex justify-center items-center gap-4 mb-6">
+      <label class="text-2xl font-semibold">월 선택:</label>
+      <select id="monthFilter" class="border p-3 rounded text-2xl">
+        <option value="all">전체</option>
+        <!-- 실제 옵션은 스크립트에서 동적으로 추가됩니다 -->
+      </select>
+    </div>
+
+    <!-- 시나리오 선택 -->
     <div class="flex justify-center items-center gap-4 mb-6">
       <label class="text-2xl font-semibold">시나리오 선택:</label>
       <select id="scenarioFilter" class="border p-3 rounded text-2xl">
@@ -33,6 +42,7 @@
   </div>
 
 <script>
+// Firebase 초기화
 const firebaseConfig = {
   apiKey: "AIzaSyCqk52hH5uwWvC8L81l8d6kZgCN2Ynt_Rg",
   authDomain: "blood-on-the-clock-tower-613ce.firebaseapp.com",
@@ -42,74 +52,147 @@ const firebaseConfig = {
   appId: "1:619177302977:web:3b282744ff5b00469e6d40"
 };
 firebase.initializeApp(firebaseConfig);
-const db=firebase.firestore();
+const db = firebase.firestore();
 
-const demons=["임프","팡구","비고모르티스","노다시","볼텍스","좀부울","푸카","샤발롯","포"];
-const minions=["독살범","스파이","부정한여자","남작","사악한쌍둥이","마녀","세레노부스","피트핵"];
-const outsiders=["집사","주정뱅이","은둔자","성자","돌연변이","연인","이발사","모지리"];
+// 캐릭터 그룹
+const demons   = ["임프","팡구","비고모르티스","노다시","볼텍스","좀부울","푸카","샤발롯","포"];
+const minions  = ["독살범","스파이","부정한여자","남작","사악한쌍둥이","마녀","세레노부스","피트핵"];
+const outsiders = ["집사","주정뱅이","은둔자","성자","돌연변이","연인","이발사","모지리"];
+
+// 유틸: 아이콘
 function getIcon(char){
-  if(demons.includes(char)) return "😈";
-  if(minions.includes(char)) return "🧟";
-  if(outsiders.includes(char)) return "🤡";
+  if (demons.includes(char))   return "😈";
+  if (minions.includes(char))  return "🧟";
+  if (outsiders.includes(char))return "🤡";
   return "🧑‍🌾";
 }
-
+// 유틸: 정렬
 function sortEntries(charWins){
   return Object.entries(charWins).sort((a,b)=>{
-    const ar=a[1].win/a[1].total, br=b[1].win/b[1].total;
-    if(br!==ar) return br-ar;
-    if(b[1].win!==a[1].win) return b[1].win-a[1].win;
-    if(b[1].total!==a[1].total) return b[1].total-a[1].total;
-    return a[0].localeCompare(b[0]);
+    const ar = a[1].win / a[1].total;
+    const br = b[1].win / b[1].total;
+    if (br !== ar) return br - ar;                      // 승률
+    if (b[1].win !== a[1].win) return b[1].win - a[1].win; // 승수
+    if (b[1].total !== a[1].total) return b[1].total - a[1].total; // 전적
+    return a[0].localeCompare(b[0]);                    // 이름
+  });
+}
+// 유틸: 년-월 문자열
+function getMonthStr(dateObj){
+  const m = (dateObj.getMonth() + 1).toString().padStart(2,"0");
+  return `${dateObj.getFullYear()}-${m}`;
+}
+// DOM 헬퍼
+function createP(html){const p=document.createElement("p");p.innerHTML=html;return p;}
+function hr(){const h=document.createElement("hr");h.className="my-6";return h;}
+
+// 전역 게임 데이터
+let allGames = [];
+
+// 월 옵션 채우기
+async function populateMonths(){
+  const snap = await db.collection("games").get();
+  allGames = snap.docs.map(d=>d.data());
+
+  const monthSet = new Set();
+  allGames.forEach(g=>{
+    const rawDate = g.date || g.playedAt || g.timestamp; // 필드명은 상황에 맞게 조정
+    const jsDate = rawDate && rawDate.seconds ? new Date(rawDate.seconds*1000) : new Date(rawDate);
+    monthSet.add(getMonthStr(jsDate));
+  });
+
+  const monthFilter = document.getElementById("monthFilter");
+  // 기존 옵션(전체) 외 모두 제거
+  while(monthFilter.options.length > 1) monthFilter.remove(1);
+
+  Array.from(monthSet).sort().reverse().forEach(m=>{
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    monthFilter.appendChild(opt);
   });
 }
 
-async function build(){
-  const scenario=document.getElementById("scenarioFilter").value;
-  const snap=await db.collection("games").get();
-  const games=snap.docs.map(d=>d.data()).filter(g=>scenario==="all"||g.scenario===scenario);
+// 화면 그리기
+function build(){
+  const scenario = document.getElementById("scenarioFilter").value;
+  const month    = document.getElementById("monthFilter").value;
 
-  let charWins={}, teamWin={선:0,악:0};
-
-  games.forEach(g=>{
-    let good=false,evil=false;
-    g.players.forEach(p=>{
-      const c=p.character, win=p.win==="승리";
-      if(!charWins[c]) charWins[c]={win:0,total:0};
-      charWins[c].total++;
-      if(win) charWins[c].win++;
-      if(win){
-        if(demons.includes(c)||minions.includes(c)) evil=true; else good=true;
-      }
-    });
-    if(good&&!evil) teamWin["선"]++;
-    if(evil&&!good) teamWin["악"]++;
+  // 필터링
+  const games = allGames.filter(g=>{
+    // 시나리오 필터
+    if (scenario !== "all" && g.scenario !== scenario) return false;
+    // 월 필터
+    if (month !== "all"){
+      const rawDate = g.date || g.playedAt || g.timestamp;
+      const jsDate = rawDate && rawDate.seconds ? new Date(rawDate.seconds*1000) : new Date(rawDate);
+      if (getMonthStr(jsDate) !== month) return false;
+    }
+    return true;
   });
 
-  const summary=document.getElementById("summary");
-  summary.innerHTML="";
+  // 승리 집계
+  let charWins = {};
+  let teamWin  = { 선:0, 악:0 };
+
+  games.forEach(g=>{
+    let goodWin=false, evilWin=false;
+    g.players.forEach(p=>{
+      const c = p.character;
+      const win = p.win === "승리";
+      if(!charWins[c]) charWins[c] = {win:0,total:0};
+      charWins[c].total++;
+      if(win) charWins[c].win++;
+
+      if(win){
+        if (demons.includes(c) || minions.includes(c)) evilWin=true;
+        else goodWin=true;
+      }
+    });
+    if(goodWin && !evilWin) teamWin["선"]++;
+    if(evilWin && !goodWin) teamWin["악"]++;
+  });
+
+  // 요약 출력
+  const summary = document.getElementById("summary");
+  summary.innerHTML = "";
   summary.appendChild(createP(`전체 게임 수: <strong>${games.length}</strong>`));
   summary.appendChild(createP(`🧑‍🌾 <strong>선팀 승리:</strong> ${teamWin["선"]}`));
   summary.appendChild(createP(`😈 <strong>악팀 승리:</strong> ${teamWin["악"]}`));
-
   summary.appendChild(hr());
-  const h=document.createElement("h3");h.className="text-3xl font-bold";h.innerText="캐릭터별 승률";
-  summary.appendChild(h);
 
-  const list=document.createElement("ul");list.className="text-left inline-block";
-  sortEntries(charWins).forEach(([c,d],i)=>{
-    const pct=((d.win/d.total)*100).toFixed(1);
-    const li=document.createElement("li");
-    li.innerHTML=`<strong>${i+1}위.</strong> ${getIcon(c)} <strong>${c}</strong>: ${d.win}승 / ${d.total}전 (${pct}%)`;
+  // 캐릭터별 승률
+  const title = document.createElement("h3");
+  title.className = "text-3xl font-bold";
+  title.textContent = "캐릭터별 승률";
+  summary.appendChild(title);
+
+  const list = document.createElement("ul");
+  list.className = "text-left inline-block";
+
+  let rank = 0;
+  sortEntries(charWins).forEach(([c,d])=>{
+    // 1승 100% 캐릭터는 제외
+    if(d.total === 1 && d.win === 1) return;
+
+    rank++;
+    const pct = ((d.win/d.total)*100).toFixed(1);
+    const li = document.createElement("li");
+    li.innerHTML = `<strong>${rank}위.</strong> ${getIcon(c)} <strong>${c}</strong>: ${d.win}승 / ${d.total}전 (${pct}%)`;
     list.appendChild(li);
   });
   summary.appendChild(list);
 }
-function createP(html){const p=document.createElement("p");p.innerHTML=html;return p;}
-function hr(){const h=document.createElement("hr");h.className="my-6";return h;}
 
-document.getElementById("scenarioFilter").addEventListener("change",build);
-window.onload=build;
+// 이벤트 바인딩
+document.getElementById("scenarioFilter").addEventListener("change", build);
+document.getElementById("monthFilter").addEventListener("change", build);
+
+// 초기 로드
+window.onload = async () =>{
+  await populateMonths();
+  build();
+};
 </script>
 </body>
 </html>
