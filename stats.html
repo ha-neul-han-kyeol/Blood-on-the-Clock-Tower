@@ -2,14 +2,28 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>전체 통계 (캐릭터 기준)</title>
+  <title>전체 통계</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800">
-  <div class="max-w-4xl mx-auto p-6">
+  <div class="max-w-5xl mx-auto p-6">
     <h1 class="text-2xl font-bold text-center mb-6">📊 전체 통계</h1>
+
+    <div class="text-center mb-4">
+      <label class="font-semibold mr-2">시나리오 선택:</label>
+      <select id="scenarioFilter" class="border p-2 rounded">
+        <option value="all">전체</option>
+        <option value="트러블 브루잉">트러블 브루잉</option>
+        <option value="섹츠앤바이올렛">섹츠앤바이올렛</option>
+        <option value="배드문라이징">배드문라이징</option>
+        <option value="포켓몬스터">포켓몬스터</option>
+        <option value="반란의 거친바다">반란의 거친바다</option>
+        <option value="로마">로마</option>
+      </select>
+    </div>
+
     <div id="summary" class="space-y-4 text-center"></div>
     <div class="mt-8 text-center">
       <a href="index.html" class="text-blue-500 hover:underline">← 홈으로 돌아가기</a>
@@ -23,62 +37,72 @@
       projectId: "blood-on-the-clock-tower-613ce",
       storageBucket: "blood-on-the-clock-tower-613ce.firebasestorage.app",
       messagingSenderId: "619177302977",
-      appId: "1:619177302977:web:3b282744ff5b00469e6d40",
-      measurementId: "G-W8THYT2M1J"
+      appId: "1:619177302977:web:3b282744ff5b00469e6d40"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    const evilCharacters = ["임프", "독살범", "스파이", "부정한여자", "남작", "팡구", "비고모르티스", "노다시", "볼텍스", "좀부울", "푸카", "샤발롯", "포"];
-    const goodCharacters = ["세탁부", "사서", "조사관", "요리사", "공감능력자", "점쟁이", "장의사", "수도승", "레이븐키퍼", "처녀", "슬레이어", "군인", "시장", "시계공", "몽상가", "뱀조련사", "수학자", "꽃파는소녀", "포고꾼", "오라클", "학자", "재봉사", "철학자", "예술가", "저글러", "현자", "할머니", "선원", "하녀", "퇴마사", "여관주인", "도박꾼", "험담꾼", "대신", "교수", "음유시인", "찻집여인", "평화주의자", "광대"];
+    const evilCharacters = ["임프", "독살범", "스파이", "부정한여자", "남작", "팡구", "비고모르티스", "노다시", "볼텍스", "좀부울", "푸카", "샤발롯", "포", "크라켄", "칼립소", "루살카", "우미보즈", "클레오파트라", "한니발", "크라수스", "카이사르", "로켓단", "팬텀", "독침붕"];
+    const outsiderCharacters = ["집사", "주정뱅이", "은둔자", "성자", "돌연변이", "연인", "이발사", "모지리", "땜장이", "문차일드", "깡패", "미치광이", "따개비", "인어", "코주부", "밀항자", "쌍둥이", "스파르타쿠스", "와인제조자", "불길한징조", "딱충이", "고오쓰", "잉어킹&갸라도스", "뮤"];
+    const minionCharacters = ["독살범", "스파이", "부정한여자", "남작", "사악한쌍둥이", "마녀", "세레노부스", "피트핵", "대부", "악마의대변인", "암살자", "배후인물", "신비여사제", "바다정령", "언데드해적", "살점포식자", "요부", "글리콘", "내장점술가", "조점관", "마자용", "질뻐기", "나옹", "붐볼"];
+    const townCharacters = ["세탁부", "사서", "조사관", "요리사", "공감능력자", "점쟁이", "장의사", "수도승", "레이븐키퍼", "처녀", "슬레이어", "군인", "시장", "시계공", "몽상가", "뱀조련사", "수학자", "꽃파는소녀", "포고꾼", "오라클", "학자", "재봉사", "철학자", "예술가", "저글러", "현자", "할머니", "선원", "하녀", "퇴마사", "여관주인", "도박꾼", "험담꾼", "대신", "교수", "음유시인", "찻집여인", "평화주의자", "광대", "노련한 선원", "항해자", "갑판장", "갑판원", "선장", "버케니어", "풋내기선원", "여급", "사략선", "1등항해사", "화약운반수", "해적선", "소라게", "조각가", "베스타의무녀", "의사", "군단병", "나팔수", "장의사", "군단기수", "백인대장", "상인", "검투사", "배우", "대장장이", "학자", "피카츄", "파이리", "꼬부기", "이상해씨", "뿔충이", "쥬벳", "라이츄", "리자몽", "거북왕", "이상해꽃", "피죤", "메타몽", "야돈", "개굴닌자", "야도란", "야도킹"];
+
+    function getRoleIcon(character) {
+      if (evilCharacters.includes(character)) return "😈";
+      if (minionCharacters.includes(character)) return "🧟";
+      if (outsiderCharacters.includes(character)) return "🤡";
+      if (townCharacters.includes(character)) return "🧑‍🌾";
+      return "❓";
+    }
 
     async function fetchStats() {
+      const scenario = document.getElementById("scenarioFilter").value;
       const snapshot = await db.collection("games").get();
       const allGames = snapshot.docs.map(doc => doc.data());
-      const totalGames = allGames.length;
 
+      let filteredGames = scenario === "all" ? allGames : allGames.filter(g => g.scenario === scenario);
       let teamWinCounter = { 선: 0, 악: 0 };
       let charWins = {};
 
-      allGames.forEach(game => {
-        let countedTeams = {};
+      filteredGames.forEach(game => {
+        let counted = {};
         game.players.forEach(p => {
           const char = p.character || "알 수 없음";
           const win = p.win === "승리";
-
           if (!charWins[char]) charWins[char] = { win: 0, total: 0 };
           charWins[char].total++;
           if (win) charWins[char].win++;
 
-          if (win && !countedTeams[char]) {
-            if (goodCharacters.includes(char)) teamWinCounter["선"]++;
+          if (win && !counted[char]) {
+            if (townCharacters.includes(char)) teamWinCounter["선"]++;
             else if (evilCharacters.includes(char)) teamWinCounter["악"]++;
-            countedTeams[char] = true;
+            counted[char] = true;
           }
         });
       });
 
       const summary = document.getElementById("summary");
-
       summary.innerHTML = `
-        <p>전체 게임 수: <strong>${totalGames}</strong></p>
+        <p>전체 게임 수: <strong>${filteredGames.length}</strong></p>
         <p>😇 선팀 승리: ${teamWinCounter["선"]}</p>
         <p>😈 악팀 승리: ${teamWinCounter["악"]}</p>
         <hr class="my-4">
-        <h2 class="text-xl font-bold">캐릭터별 승률 (전체)</h2>
+        <h2 class="text-xl font-bold">캐릭터별 승률</h2>
         <ul class="text-left inline-block">
           ${Object.entries(charWins)
             .sort((a, b) => b[1].total - a[1].total)
             .map(([char, data]) => {
               const rate = ((data.win / data.total) * 100).toFixed(1);
-              return `<li>${char}: ${data.win}승 / ${data.total}전 (${rate}%)</li>`;
+              const icon = getRoleIcon(char);
+              return `<li>${icon} ${char}: ${data.win}승 / ${data.total}전 (${rate}%)</li>`;
             }).join("")}
         </ul>
       `;
     }
 
-    fetchStats();
+    document.getElementById("scenarioFilter").addEventListener("change", fetchStats);
+    window.onload = fetchStats;
   </script>
 </body>
 </html>
