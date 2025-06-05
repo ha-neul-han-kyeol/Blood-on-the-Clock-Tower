@@ -1,1 +1,98 @@
-<!DOCTYPE html><html><head><meta charset='utf-8'><title>통계</title></head><body><h1>통계 페이지</h1></body></html>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>전체 통계</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <div class="max-w-4xl mx-auto p-6">
+    <h1 class="text-2xl font-bold text-center mb-6">📊 전체 통계</h1>
+    <div id="summary" class="space-y-4 text-center"></div>
+    <div class="mt-8 text-center">
+      <a href="index.html" class="text-blue-500 hover:underline">← 홈으로 돌아가기</a>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCqk52hH5uwWvC8L81l8d6kZgCN2Ynt_Rg",
+      authDomain: "blood-on-the-clock-tower-613ce.firebaseapp.com",
+      projectId: "blood-on-the-clock-tower-613ce",
+      storageBucket: "blood-on-the-clock-tower-613ce.firebasestorage.app",
+      messagingSenderId: "619177302977",
+      appId: "1:619177302977:web:3b282744ff5b00469e6d40",
+      measurementId: "G-W8THYT2M1J"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    async function fetchStats() {
+      const snapshot = await db.collection("games").get();
+      const allGames = snapshot.docs.map(doc => doc.data());
+      const totalGames = allGames.length;
+
+      let teamWins = { 선: 0, 악: 0 };
+      let roleWins = {};  // 마을주민, 하수인, 악마 등
+      let charWins = {};  // 캐릭터별
+
+      allGames.forEach(game => {
+        game.players.forEach(p => {
+          const win = p.win === "승리";
+          const team = p.team || "기타";
+          const role = p.role || "기타";
+          const char = p.character || "알 수 없음";
+
+          // 팀 승리
+          if (win) {
+            teamWins[team] = (teamWins[team] || 0) + 1;
+          }
+
+          // 역할 승리
+          const roleKey = `${role}`;
+          if (!roleWins[roleKey]) roleWins[roleKey] = { win: 0, total: 0 };
+          roleWins[roleKey].total++;
+          if (win) roleWins[roleKey].win++;
+
+          // 캐릭터 승리
+          if (!charWins[char]) charWins[char] = { win: 0, total: 0 };
+          charWins[char].total++;
+          if (win) charWins[char].win++;
+        });
+      });
+
+      const summary = document.getElementById("summary");
+
+      summary.innerHTML = `
+        <p>전체 게임 수: <strong>${totalGames}</strong></p>
+        <p>✅ 선팀 승리: ${teamWins["선"] || 0}</p>
+        <p>❌ 악팀 승리: ${teamWins["악"] || 0}</p>
+        <hr class="my-4">
+        <h2 class="text-xl font-bold">역할별 승률</h2>
+        <ul>
+          ${Object.entries(roleWins).map(([role, data]) => {
+            const rate = ((data.win / data.total) * 100).toFixed(1);
+            return `<li>${role}: ${data.win}승 / ${data.total}전 (${rate}%)</li>`;
+          }).join("")}
+        </ul>
+        <hr class="my-4">
+        <h2 class="text-xl font-bold mt-4">캐릭터별 승률 (상위 10)</h2>
+        <ul>
+          ${Object.entries(charWins)
+            .sort((a, b) => b[1].total - a[1].total)
+            .slice(0, 10)
+            .map(([char, data]) => {
+              const rate = ((data.win / data.total) * 100).toFixed(1);
+              return `<li>${char}: ${data.win}승 / ${data.total}전 (${rate}%)</li>`;
+            }).join("")}
+        </ul>
+      `;
+    }
+
+    fetchStats();
+  </script>
+</body>
+</html>
