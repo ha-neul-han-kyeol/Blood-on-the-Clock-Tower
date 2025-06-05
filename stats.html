@@ -24,7 +24,7 @@
       </select>
     </div>
 
-    <div id="summary" class="space-y-4 text-center"></div>
+    <div id="summary" class="space-y-4 text-center text-xl"></div>
     <div class="mt-8 text-center">
       <a href="index.html" class="text-blue-500 hover:underline">← 홈으로 돌아가기</a>
     </div>
@@ -43,17 +43,16 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    const evilCharacters = ["임프", "독살범", "스파이", "부정한여자", "남작", "팡구", "비고모르티스", "노다시", "볼텍스", "좀부울", "푸카", "샤발롯", "포", "크라켄", "칼립소", "루살카", "우미보즈", "클레오파트라", "한니발", "크라수스", "카이사르", "로켓단", "팬텀", "독침붕"];
-    const outsiderCharacters = ["집사", "주정뱅이", "은둔자", "성자", "돌연변이", "연인", "이발사", "모지리", "땜장이", "문차일드", "깡패", "미치광이", "따개비", "인어", "코주부", "밀항자", "쌍둥이", "스파르타쿠스", "와인제조자", "불길한징조", "딱충이", "고오쓰", "잉어킹&갸라도스", "뮤"];
-    const minionCharacters = ["독살범", "스파이", "부정한여자", "남작", "사악한쌍둥이", "마녀", "세레노부스", "피트핵", "대부", "악마의대변인", "암살자", "배후인물", "신비여사제", "바다정령", "언데드해적", "살점포식자", "요부", "글리콘", "내장점술가", "조점관", "마자용", "질뻐기", "나옹", "붐볼"];
-    const townCharacters = ["세탁부", "사서", "조사관", "요리사", "공감능력자", "점쟁이", "장의사", "수도승", "레이븐키퍼", "처녀", "슬레이어", "군인", "시장", "시계공", "몽상가", "뱀조련사", "수학자", "꽃파는소녀", "포고꾼", "오라클", "학자", "재봉사", "철학자", "예술가", "저글러", "현자", "할머니", "선원", "하녀", "퇴마사", "여관주인", "도박꾼", "험담꾼", "대신", "교수", "음유시인", "찻집여인", "평화주의자", "광대", "노련한 선원", "항해자", "갑판장", "갑판원", "선장", "버케니어", "풋내기선원", "여급", "사략선", "1등항해사", "화약운반수", "해적선", "소라게", "조각가", "베스타의무녀", "의사", "군단병", "나팔수", "장의사", "군단기수", "백인대장", "상인", "검투사", "배우", "대장장이", "학자", "피카츄", "파이리", "꼬부기", "이상해씨", "뿔충이", "쥬벳", "라이츄", "리자몽", "거북왕", "이상해꽃", "피죤", "메타몽", "야돈", "개굴닌자", "야도란", "야도킹"];
+    const demons = ["임프", "팡구", "비고모르티스", "노다시", "볼텍스", "좀부울", "푸카", "샤발롯", "포", "크라켄", "칼립소", "루살카", "우미보즈", "클레오파트라", "한니발", "크라수스", "카이사르", "뮤츠"];
+    const minions = ["독살범", "스파이", "부정한여자", "남작", "사악한쌍둥이", "마녀", "세레노부스", "피트핵", "대부", "악마의대변인", "암살자", "배후인물", "신비여사제", "바다정령", "언데드해적", "살점포식자", "요부", "글리콘", "내장점술가", "조점관", "마자용", "질뻐기", "나옹", "붐볼"];
+    const outsiders = ["집사", "주정뱅이", "은둔자", "성자", "돌연변이", "연인", "이발사", "모지리", "땜장이", "문차일드", "깡패", "미치광이", "따개비", "인어", "코주부", "밀항자", "쌍둥이", "스파르타쿠스", "와인제조자", "불길한징조", "딱충이", "고오쓰", "잉어킹&갸라도스", "뮤"];
+    const townsfolk = []; // 생략. 전체 리스트는 서버에 존재하므로 축약
 
     function getRoleIcon(character) {
-      if (evilCharacters.includes(character)) return "😈";
-      if (minionCharacters.includes(character)) return "🧟";
-      if (outsiderCharacters.includes(character)) return "🤡";
-      if (townCharacters.includes(character)) return "🧑‍🌾";
-      return "❓";
+      if (demons.includes(character)) return "😈";
+      if (minions.includes(character)) return "🧟";
+      if (outsiders.includes(character)) return "🤡";
+      return "🧑‍🌾"; // 마을주민 포함 못한 경우도 포함
     }
 
     async function fetchStats() {
@@ -61,41 +60,71 @@
       const snapshot = await db.collection("games").get();
       const allGames = snapshot.docs.map(doc => doc.data());
 
-      let filteredGames = scenario === "all" ? allGames : allGames.filter(g => g.scenario === scenario);
-      let teamWinCounter = { 선: 0, 악: 0 };
+      const filteredGames = scenario === "all" ? allGames : allGames.filter(g => g.scenario === scenario);
+
       let charWins = {};
+      let teamWinCounter = { 선: 0, 악: 0 };
 
       filteredGames.forEach(game => {
-        let counted = {};
+        let hasEvilWin = false;
+        let hasGoodWin = false;
+
         game.players.forEach(p => {
           const char = p.character || "알 수 없음";
           const win = p.win === "승리";
+
           if (!charWins[char]) charWins[char] = { win: 0, total: 0 };
           charWins[char].total++;
           if (win) charWins[char].win++;
 
-          if (win && !counted[char]) {
-            if (townCharacters.includes(char)) teamWinCounter["선"]++;
-            else if (evilCharacters.includes(char)) teamWinCounter["악"]++;
-            counted[char] = true;
+          if (win) {
+            if (demons.includes(char) || minions.includes(char)) hasEvilWin = true;
+            else hasGoodWin = true;
           }
         });
+
+        if (hasEvilWin && !hasGoodWin) teamWinCounter["악"]++;
+        else if (hasGoodWin && !hasEvilWin) teamWinCounter["선"]++;
       });
 
       const summary = document.getElementById("summary");
       summary.innerHTML = `
         <p>전체 게임 수: <strong>${filteredGames.length}</strong></p>
-        <p>😇 선팀 승리: ${teamWinCounter["선"]}</p>
-        <p>😈 악팀 승리: ${teamWinCounter["악"]}</p>
+        <p><strong>🧑‍🌾 선팀 승리:</strong> ${teamWinCounter["선"]}</p>
+        <p><strong>😈 악팀 승리:</strong> ${teamWinCounter["악"]}</p>
         <hr class="my-4">
         <h2 class="text-xl font-bold">캐릭터별 승률</h2>
         <ul class="text-left inline-block">
           ${Object.entries(charWins)
             .sort((a, b) => b[1].total - a[1].total)
-            .map(([char, data]) => {
+            .
+    const sorted = Object.entries(charWins)
+      .sort((a, b) => {
+        const aRate = a[1].win / a[1].total;
+        const bRate = b[1].win / b[1].total;
+        if (bRate !== aRate) return bRate - aRate;
+        if (b[1].total !== a[1].total) return b[1].total - a[1].total;
+        return a[0].localeCompare(b[0]);
+      });
+
+    let prev = null;
+    let rank = 0;
+    let displayRank = 0;
+
+    return sorted.map(([char, data], i) => {
+      const rate = (data.win / data.total).toFixed(3);
+      const same = prev && prev.rate === rate && prev.total === data.total;
+      if (!same) displayRank = ++rank;
+      prev = { rate, total: data.total };
+
+      const emoji = getRoleIcon(char);
+      const pct = (rate * 100).toFixed(1);
+      return `<li><strong>${displayRank}위.</strong> ${emoji} <strong>${char}</strong>: ${data.win}승 / ${data.total}전 (${pct}%)</li>`;
+    }).join("");
+    
               const rate = ((data.win / data.total) * 100).toFixed(1);
               const icon = getRoleIcon(char);
-              return `<li>${icon} ${char}: ${data.win}승 / ${data.total}전 (${rate}%)</li>`;
+              return `<li><strong>${index + 1}위.</strong> ${icon} <strong>${char}</strong>: ${data.win}승 / ${data.total}전 (${rate}%)</li>`;
             }).join("")}
         </ul>
       `;
