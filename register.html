@@ -95,170 +95,7 @@
     const allowedEmail = "skyhk1202@naver.com";
 
     /* 캐릭터 데이터 (생략… 이전 답변과 동일) */
-    const characterData = {
-  "트러블 브루잉": [
-    "세탁부",
-    "사서",
-    "조사관",
-    "요리사",
-    "공감능력자",
-    "점쟁이",
-    "장의사",
-    "수도승",
-    "레이븐키퍼",
-    "처녀",
-    "슬레이어",
-    "군인",
-    "시장",
-    "집사",
-    "주정뱅이",
-    "은둔자",
-    "성자",
-    "독살범",
-    "스파이",
-    "부정한여자",
-    "남작",
-    "임프"
-  ],
-  "섹츠앤바이올렛": [
-    "시계공",
-    "몽상가",
-    "뱀조련사",
-    "수학자",
-    "꽃파는소녀",
-    "포고꾼",
-    "오라클",
-    "학자",
-    "재봉사",
-    "철학자",
-    "예술가",
-    "저글러",
-    "현자",
-    "돌연변이",
-    "연인",
-    "이발사",
-    "모지리",
-    "사악한쌍둥이",
-    "마녀",
-    "세레노부스",
-    "피트핵",
-    "팡구",
-    "비고모르티스",
-    "노다시",
-    "볼텍스"
-  ],
-  "배드문라이징": [
-    "할머니",
-    "선원",
-    "하녀",
-    "퇴마사",
-    "여관주인",
-    "도박꾼",
-    "험담꾼",
-    "대신",
-    "교수",
-    "음유시인",
-    "찻집여인",
-    "평화주의자",
-    "광대",
-    "땜장이",
-    "문차일드",
-    "깡패",
-    "미치광이",
-    "대부",
-    "악마의대변인",
-    "암살자",
-    "배후인물",
-    "좀부울",
-    "푸카",
-    "샤발롯",
-    "포"
-  ],
-  "포켓몬스터": [
-    "피카츄",
-    "파이리",
-    "꼬부기",
-    "이상해씨",
-    "뿔충이",
-    "쥬벳",
-    "라이츄",
-    "리자몽",
-    "거북왕",
-    "이상해꽃",
-    "피죤",
-    "메타몽",
-    "야돈",
-    "개굴닌자",
-    "야도란",
-    "야도킹",
-    "딱충이",
-    "고오쓰",
-    "잉어킹&갸라도스",
-    "뮤",
-    "마자용",
-    "질뻐기",
-    "나옹",
-    "붐볼",
-    "독침붕",
-    "팬텀",
-    "뮤츠",
-    "로켓단"
-  ],
-  "반란의 거친바다": [
-    "노련한 선원",
-    "항해자",
-    "갑판장",
-    "갑판원",
-    "선장",
-    "버케니어",
-    "풋내기선원",
-    "여급",
-    "사략선",
-    "1등항해사",
-    "화약운반수",
-    "해적선",
-    "소라게",
-    "따개비",
-    "인어",
-    "코주부",
-    "밀항자",
-    "신비여사제",
-    "바다정령",
-    "언데드해적",
-    "살점포식자",
-    "크라켄",
-    "칼립소",
-    "루살카",
-    "우미보즈"
-  ],
-  "로마": [
-    "조각가",
-    "베스타의무녀",
-    "의사",
-    "군단병",
-    "나팔수",
-    "장의사",
-    "군단기수",
-    "백인대장",
-    "상인",
-    "검투사",
-    "배우",
-    "대장장이",
-    "학자",
-    "쌍둥이",
-    "스파르타쿠스",
-    "와인제조자",
-    "불길한징조",
-    "요부",
-    "글리콘",
-    "내장점술가",
-    "조점관",
-    "클레오파트라",
-    "한니발",
-    "크라수스",
-    "카이사르"
-  ]
-};
+    // characterData removed; dynamic
 
     /* 권한 체크 → 로그인 페이지로 리다이렉트 */
     auth.onAuthStateChanged((user) => {
@@ -336,5 +173,102 @@
     /* 초기 5인 세팅 */
     updatePlayerInputs(5);
   </script>
+
+  <script>
+    /* Firebase app 초기화 (기존 config 유지) */
+    // 이미 상단에서 firebase.initializeApp 호출됨
+
+    // === 관리자 인증 & 데이터 로딩 ===
+    const allowedEmail = "skyhk1202@naver.com";
+
+    let charMaster = {};
+    let sheets = {};
+
+    const scenarioSel = document.getElementById("scenario");
+
+    firebase.auth().onAuthStateChanged(async user=>{
+      if(!user || user.email !== allowedEmail){
+        window.location.replace("login.html");
+        return;
+      }
+      await loadData();
+    });
+
+    /* 공통 데이터 로딩 */
+    async function loadData(){
+      /* 1. 캐릭터 마스터 */
+      const charsSnap = await db.collection("characters").get();
+      charsSnap.forEach(doc=>{
+        const d = doc.data();
+        charMaster[d.name] = d.role;
+      });
+
+      /* 2. 시트 목록 */
+      const sheetSnap = await db.collection("sheets").get();
+      sheetSnap.forEach(doc=>{
+        const d = doc.data();
+        sheets[d.name] = d;
+      });
+
+      /* 3. 시나리오 드롭다운 생성 */
+      const originals = Object.values(sheets).filter(s=>!s.isCustom);
+      const customs   = Object.values(sheets).filter(s=> s.isCustom);
+      const makeOpt = s => `<option value="\${s.name}">\${s.name}</option>`;
+      scenarioSel.innerHTML =
+        '<option value="">▼ 선택해주세요</option>' +
+        (originals.length? '<optgroup label="오리지널">'+ originals.map(makeOpt).join("") +'</optgroup>':'') +
+        (customs.length?  '<optgroup label="커스텀">'+ customs.map(makeOpt).join("") +'</optgroup>':'');
+
+      updatePlayerInputs(+document.getElementById("playerCount").value);
+    }
+
+    /* 플레이어 입력 생성 */
+    function updatePlayerInputs(count){
+      const scenario = document.getElementById("scenario").value;
+      const characters = (sheets[scenario]?.characters) || [];
+
+      const container = document.getElementById("playerInputs");
+      container.innerHTML = "";
+
+      for(let i=0;i<count;i++){
+        const charInput = characters.length ?
+          `<select name="player\${i}_character" id="player\${i}_character" class="w-full border rounded p-2" required>
+             <option value="">▼ 캐릭터 선택</option>
+             \${characters.map(c=>'<option value="'+c+'">'+c+'</option>').join("")}
+           </select>` :
+          `<input list="charList" name="player\${i}_character" id="player\${i}_character"
+                  class="w-full border rounded p-2" placeholder="캐릭터 이름 입력" required>`;
+
+        container.insertAdjacentHTML("beforeend", \`
+          <div class="p-3 bg-gray-50 rounded mb-4 space-y-2">
+            <h3 class="font-semibold mb-2">플레이어 \${i+1}</h3>
+            <input type="text" name="player\${i}_name" placeholder="이름" class="w-full border rounded p-2" required />
+            \${charInput}
+            <select name="player\${i}_win" class="w-full border rounded p-2" required>
+              <option value="">▼ 승/패 선택</option>
+              <option value="승리">승리</option>
+              <option value="패배">패배</option>
+            </select>
+          </div>
+        \`);
+      }
+
+      // datalist(자동완성) 갱신
+      document.getElementById("charList")?.remove();
+      const dl = document.createElement("datalist");
+      dl.id = "charList";
+      dl.innerHTML = Object.keys(charMaster).map(c=>'<option value="'+c+'">').join("");
+      document.body.appendChild(dl);
+    }
+
+    // 입력 필드 갱신 이벤트
+    document.getElementById("playerCount").addEventListener("input", e=>{
+      updatePlayerInputs(+e.target.value);
+    });
+    scenarioSel.addEventListener("change", ()=>{
+      updatePlayerInputs(+document.getElementById("playerCount").value);
+    });
+  </script>
+
 </body>
 </html>
