@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>게임 결과 등록</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+  <div class="max-w-2xl mx-auto p-4">
+    <h1 class="text-2xl font-bold text-center mb-6">🎮 게임 결과 등록</h1>
+    <form id="gameForm" class="space-y-4 bg-white shadow p-6 rounded">
+      <!-- 날짜 입력 -->
+      <div>
+        <label class="block mb-1 font-semibold">날짜</label>
+        <input type="date" name="date" class="w-full border rounded p-2" required />
+      </div>
+
+      <!-- 시트 선택 -->
+      <div>
+        <label class="block mb-1 font-semibold">시나리오 선택</label>
+        <select name="scenario" id="scenario" class="w-full border rounded p-2" required>
+          <option value="">▼ 선택해주세요</option>
+          <option value="트러블 브루잉">트러블 브루잉</option>
+          <option value="섹츠앤바이올렛">섹츠앤바이올렛</option>
+          <option value="배드문라이징">배드문라이징</option>
+          <option value="포켓몬스터">포켓몬스터</option>
+          <option value="반란의 거친바다">반란의 거친바다</option>
+          <option value="로마">로마</option>
+          <option value="Custom">커스텀 스크립트</option>
+        </select>
+      </div>
+
+      <!-- 플레이어 수 입력 -->
+      <div>
+        <label class="block mb-1 font-semibold">플레이어 수</label>
+        <input type="number" id="playerCount" name="playerCount" min="1" max="20" value="5" class="w-full border rounded p-2" required />
+      </div>
+
+      <!-- 동적 캐릭터 입력 영역 -->
+      <div id="playerInputs" class="space-y-4"></div>
+
+      <button type="submit" class="w-full bg-blue-500 text-white font-semibold py-2 rounded hover:bg-blue-600">저장하기</button>
+    </form>
+
+    <div class="mt-4 text-center">
+      <a href="index.html" class="text-blue-500 hover:underline">← 홈으로 돌아가기</a>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCqk52hH5uwWvC8L81l8d6kZgCN2Ynt_Rg",
+      authDomain: "blood-on-the-clock-tower-613ce.firebaseapp.com",
+      projectId: "blood-on-the-clock-tower-613ce",
+      storageBucket: "blood-on-the-clock-tower-613ce.firebasestorage.app",
+      messagingSenderId: "619177302977",
+      appId: "1:619177302977:web:3b282744ff5b00469e6d40",
+      measurementId: "G-W8THYT2M1J"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    document.getElementById('gameForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const date = e.target.date.value;
+      const scenario = e.target.scenario.value;
+      const playerCount = parseInt(e.target.playerCount.value);
+      const players = [];
+
+      for (let i = 0; i < playerCount; i++) {
+        const name = e.target[`player${i}_name`]?.value;
+        const character = e.target[`player${i}_character`]?.value;
+        const win = e.target[`player${i}_win`]?.value;
+        const team = e.target[`player${i}_team`] ? e.target[`player${i}_team`].value : null;
+        const role = e.target[`player${i}_role`] ? e.target[`player${i}_role`].value : null;
+
+        players.push({ name, character, team, role, win });
+      }
+
+      await db.collection("games").add({
+        date,
+        scenario,
+        players,
+        timestamp: new Date()
+      });
+
+      alert('데이터가 Firebase에 저장되었습니다!');
+      e.target.reset();
+    });
+  </script>
+</body>
+</html>
