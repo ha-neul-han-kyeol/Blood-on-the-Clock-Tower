@@ -9,7 +9,7 @@
 </head>
 <body class="bg-gray-100 text-gray-800">
   <div class="max-w-4xl mx-auto p-6">
-    <h1 class="text-2xl font-bold text-center mb-6">📊 전체 통계 (캐릭터 기준)</h1>
+    <h1 class="text-2xl font-bold text-center mb-6">📊 전체 통계</h1>
     <div id="summary" class="space-y-4 text-center"></div>
     <div class="mt-8 text-center">
       <a href="index.html" class="text-blue-500 hover:underline">← 홈으로 돌아가기</a>
@@ -30,20 +30,32 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    const evilCharacters = ["임프", "독살범", "스파이", "부정한여자", "남작", "팡구", "비고모르티스", "노다시", "볼텍스", "좀부울", "푸카", "샤발롯", "포"];
+    const goodCharacters = ["세탁부", "사서", "조사관", "요리사", "공감능력자", "점쟁이", "장의사", "수도승", "레이븐키퍼", "처녀", "슬레이어", "군인", "시장", "시계공", "몽상가", "뱀조련사", "수학자", "꽃파는소녀", "포고꾼", "오라클", "학자", "재봉사", "철학자", "예술가", "저글러", "현자", "할머니", "선원", "하녀", "퇴마사", "여관주인", "도박꾼", "험담꾼", "대신", "교수", "음유시인", "찻집여인", "평화주의자", "광대"];
+
     async function fetchStats() {
       const snapshot = await db.collection("games").get();
       const allGames = snapshot.docs.map(doc => doc.data());
       const totalGames = allGames.length;
 
+      let teamWinCounter = { 선: 0, 악: 0 };
       let charWins = {};
 
       allGames.forEach(game => {
+        let countedTeams = {};
         game.players.forEach(p => {
           const char = p.character || "알 수 없음";
           const win = p.win === "승리";
+
           if (!charWins[char]) charWins[char] = { win: 0, total: 0 };
           charWins[char].total++;
           if (win) charWins[char].win++;
+
+          if (win && !countedTeams[char]) {
+            if (goodCharacters.includes(char)) teamWinCounter["선"]++;
+            else if (evilCharacters.includes(char)) teamWinCounter["악"]++;
+            countedTeams[char] = true;
+          }
         });
       });
 
@@ -51,12 +63,13 @@
 
       summary.innerHTML = `
         <p>전체 게임 수: <strong>${totalGames}</strong></p>
+        <p>😇 선팀 승리: ${teamWinCounter["선"]}</p>
+        <p>😈 악팀 승리: ${teamWinCounter["악"]}</p>
         <hr class="my-4">
-        <h2 class="text-xl font-bold">캐릭터별 승률 (상위 10)</h2>
+        <h2 class="text-xl font-bold">캐릭터별 승률 (전체)</h2>
         <ul class="text-left inline-block">
           ${Object.entries(charWins)
             .sort((a, b) => b[1].total - a[1].total)
-            .slice(0, 10)
             .map(([char, data]) => {
               const rate = ((data.win / data.total) * 100).toFixed(1);
               return `<li>${char}: ${data.win}승 / ${data.total}전 (${rate}%)</li>`;
