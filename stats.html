@@ -7,7 +7,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="bg-gray-100 text-gray-800 text-lg sm:text-xl">
   <div class="max-w-5xl mx-auto p-8">
     <h1 class="text-4xl font-extrabold text-center mb-8">📊 전체 통계</h1>
 
@@ -170,6 +170,7 @@ g.players.forEach(p=>{
   let rank = 0;
   sortEntries(charWins).forEach(([c,d])=>{
     // 1승 100% 캐릭터는 제외
+    if (rank >= 10) return;
     if(d.total === 1 && d.win === 1) return;
 
     rank++;
