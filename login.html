@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>로그인</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+  <div class="bg-white p-8 rounded shadow-md w-96">
+    <h2 class="text-2xl font-bold mb-4 text-center">🔒 관리자 로그인</h2>
+    <form id="loginForm" class="space-y-4">
+      <input type="email" id="email" placeholder="이메일" required class="w-full border p-2 rounded">
+      <input type="password" id="password" placeholder="비밀번호" required class="w-full border p-2 rounded">
+      <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">로그인</button>
+    </form>
+    <p id="errorMsg" class="text-red-500 text-sm mt-2 hidden text-center"></p>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCqk52hH5uwWvC8L81l8d6kZgCN2Ynt_Rg",
+      authDomain: "blood-on-the-clock-tower-613ce.firebaseapp.com",
+      projectId: "blood-on-the-clock-tower-613ce",
+      storageBucket: "blood-on-the-clock-tower-613ce.firebasestorage.app",
+      messagingSenderId: "619177302977",
+      appId: "1:619177302977:web:3b282744ff5b00469e6d40",
+      measurementId: "G-W8THYT2M1J"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+
+        if (user.email === "skyhk1202@naver.com") {
+          window.location.href = "register.html";
+        } else {
+          document.getElementById("errorMsg").textContent = "접근 권한이 없습니다.";
+          document.getElementById("errorMsg").classList.remove("hidden");
+          auth.signOut();
+        }
+      } catch (error) {
+        document.getElementById("errorMsg").textContent = "로그인 실패: " + error.message;
+        document.getElementById("errorMsg").classList.remove("hidden");
+      }
+    });
+  </script>
+</body>
+</html>
