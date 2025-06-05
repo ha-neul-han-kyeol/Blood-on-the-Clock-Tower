@@ -95,7 +95,7 @@
     const allowedEmail = "skyhk1202@naver.com";
 
     /* 캐릭터 데이터 (생략… 이전 답변과 동일) */
-    // characterData removed; dynamic
+    // characterData removed (now Firestore-driven)
 
     /* 권한 체크 → 로그인 페이지로 리다이렉트 */
     auth.onAuthStateChanged((user) => {
@@ -174,101 +174,97 @@
     updatePlayerInputs(5);
   </script>
 
-  <script>
-    /* Firebase app 초기화 (기존 config 유지) */
-    // 이미 상단에서 firebase.initializeApp 호출됨
+<script>
+  /* Firebase 초기화는 페이지 상단에 이미 포함되어 있다고 가정 */
 
-    // === 관리자 인증 & 데이터 로딩 ===
-    const allowedEmail = "skyhk1202@naver.com";
+  /* 관리자 인증 */
+  const allowedEmail = "skyhk1202@naver.com";
 
-    let charMaster = {};
-    let sheets = {};
+  let charMaster = {}; // {이름: role}
+  let sheets = {};     // {시트이름: {name,isCustom,characters:[]}}
+  const scenarioSel = document.getElementById("scenario");
 
-    const scenarioSel = document.getElementById("scenario");
+  firebase.auth().onAuthStateChanged(async user=>{
+    if(!user || user.email !== allowedEmail){
+      window.location.replace("login.html");
+      return;
+    }
+    await loadData();
+  });
 
-    firebase.auth().onAuthStateChanged(async user=>{
-      if(!user || user.email !== allowedEmail){
-        window.location.replace("login.html");
-        return;
-      }
-      await loadData();
+  /* ===== 데이터 로드 ===== */
+  async function loadData(){
+    /* 1. 캐릭터 마스터 */
+    const charsSnap = await db.collection("characters").get();
+    charsSnap.forEach(doc=>{
+      const d = doc.data();
+      charMaster[d.name] = d.role; // role: townsfolk|outsider|minion|demon
     });
 
-    /* 공통 데이터 로딩 */
-    async function loadData(){
-      /* 1. 캐릭터 마스터 */
-      const charsSnap = await db.collection("characters").get();
-      charsSnap.forEach(doc=>{
-        const d = doc.data();
-        charMaster[d.name] = d.role;
-      });
+    /* 2. 시트 목록 */
+    const sheetSnap = await db.collection("sheets").get();
+    sheetSnap.forEach(doc=>{
+      const d = doc.data();
+      sheets[d.name] = d;
+    });
 
-      /* 2. 시트 목록 */
-      const sheetSnap = await db.collection("sheets").get();
-      sheetSnap.forEach(doc=>{
-        const d = doc.data();
-        sheets[d.name] = d;
-      });
+    /* 3. 시나리오 드롭다운 */
+    const originals = Object.values(sheets).filter(s=>!s.isCustom);
+    const customs   = Object.values(sheets).filter(s=> s.isCustom);
+    const makeOpt = s => `<option value="\${s.name}">\${s.name}</option>`;
+    scenarioSel.innerHTML =
+      '<option value="">▼ 선택해주세요</option>' +
+      (originals.length ? '<optgroup label="오리지널">' + originals.map(makeOpt).join("") + '</optgroup>' : '') +
+      (customs.length   ? '<optgroup label="커스텀">'   + customs.map(makeOpt).join("")   + '</optgroup>' : '');
 
-      /* 3. 시나리오 드롭다운 생성 */
-      const originals = Object.values(sheets).filter(s=>!s.isCustom);
-      const customs   = Object.values(sheets).filter(s=> s.isCustom);
-      const makeOpt = s => `<option value="\${s.name}">\${s.name}</option>`;
-      scenarioSel.innerHTML =
-        '<option value="">▼ 선택해주세요</option>' +
-        (originals.length? '<optgroup label="오리지널">'+ originals.map(makeOpt).join("") +'</optgroup>':'') +
-        (customs.length?  '<optgroup label="커스텀">'+ customs.map(makeOpt).join("") +'</optgroup>':'');
+    updatePlayerInputs(+document.getElementById("playerCount").value);
+  }
 
-      updatePlayerInputs(+document.getElementById("playerCount").value);
+  /* ===== 플레이어 입력 영역 생성 ===== */
+  function updatePlayerInputs(count){
+    const scenario = scenarioSel.value;
+    const chars = (sheets[scenario]?.characters) || [];
+
+    const container = document.getElementById("playerInputs");
+    container.innerHTML = "";
+
+    for(let i=0;i<count;i++){
+      const charInput = chars.length ?
+        '<select name="player'+i+'_character" id="player'+i+'_character" class="w-full border rounded p-2" required>' +
+        '<option value="">▼ 캐릭터 선택</option>' +
+        chars.map(c=>'<option value="'+c+'">'+c+'</option>').join("") +
+        '</select>' :
+        '<input list="charList" name="player'+i+'_character" id="player'+i+'_character" class="w-full border rounded p-2" placeholder="캐릭터 이름 입력" required>';
+
+      container.insertAdjacentHTML("beforeend",
+        '<div class="p-3 bg-gray-50 rounded mb-4 space-y-2">' +
+          '<h3 class="font-semibold mb-2">플레이어 '+(i+1)+'</h3>' +
+          '<input type="text" name="player'+i+'_name" placeholder="이름" class="w-full border rounded p-2" required />' +
+          charInput +
+          '<select name="player'+i+'_win" class="w-full border rounded p-2" required>' +
+            '<option value="">▼ 승/패 선택</option>' +
+            '<option value="승리">승리</option>' +
+            '<option value="패배">패배</option>' +
+          '</select>' +
+        '</div>');
     }
 
-    /* 플레이어 입력 생성 */
-    function updatePlayerInputs(count){
-      const scenario = document.getElementById("scenario").value;
-      const characters = (sheets[scenario]?.characters) || [];
+    // datalist for autocomplete
+    document.getElementById("charList")?.remove();
+    const dl = document.createElement("datalist");
+    dl.id = "charList";
+    dl.innerHTML = Object.keys(charMaster).map(c=>'<option value="'+c+'">').join("");
+    document.body.appendChild(dl);
+  }
 
-      const container = document.getElementById("playerInputs");
-      container.innerHTML = "";
-
-      for(let i=0;i<count;i++){
-        const charInput = characters.length ?
-          `<select name="player\${i}_character" id="player\${i}_character" class="w-full border rounded p-2" required>
-             <option value="">▼ 캐릭터 선택</option>
-             \${characters.map(c=>'<option value="'+c+'">'+c+'</option>').join("")}
-           </select>` :
-          `<input list="charList" name="player\${i}_character" id="player\${i}_character"
-                  class="w-full border rounded p-2" placeholder="캐릭터 이름 입력" required>`;
-
-        container.insertAdjacentHTML("beforeend", \`
-          <div class="p-3 bg-gray-50 rounded mb-4 space-y-2">
-            <h3 class="font-semibold mb-2">플레이어 \${i+1}</h3>
-            <input type="text" name="player\${i}_name" placeholder="이름" class="w-full border rounded p-2" required />
-            \${charInput}
-            <select name="player\${i}_win" class="w-full border rounded p-2" required>
-              <option value="">▼ 승/패 선택</option>
-              <option value="승리">승리</option>
-              <option value="패배">패배</option>
-            </select>
-          </div>
-        \`);
-      }
-
-      // datalist(자동완성) 갱신
-      document.getElementById("charList")?.remove();
-      const dl = document.createElement("datalist");
-      dl.id = "charList";
-      dl.innerHTML = Object.keys(charMaster).map(c=>'<option value="'+c+'">').join("");
-      document.body.appendChild(dl);
-    }
-
-    // 입력 필드 갱신 이벤트
-    document.getElementById("playerCount").addEventListener("input", e=>{
-      updatePlayerInputs(+e.target.value);
-    });
-    scenarioSel.addEventListener("change", ()=>{
-      updatePlayerInputs(+document.getElementById("playerCount").value);
-    });
-  </script>
+  /* ===== 이벤트 ===== */
+  document.getElementById("playerCount").addEventListener("input", e=>{
+    updatePlayerInputs(+e.target.value);
+  });
+  scenarioSel.addEventListener("change", ()=>{
+    updatePlayerInputs(+document.getElementById("playerCount").value);
+  });
+</script>
 
 </body>
 </html>
