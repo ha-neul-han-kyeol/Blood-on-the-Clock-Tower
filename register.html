@@ -24,10 +24,6 @@
           <option value="트러블 브루잉">트러블 브루잉</option>
           <option value="섹츠앤바이올렛">섹츠앤바이올렛</option>
           <option value="배드문라이징">배드문라이징</option>
-          <option value="포켓몬스터">포켓몬스터</option>
-          <option value="반란의 거친바다">반란의 거친바다</option>
-          <option value="로마">로마</option>
-          <option value="Custom">커스텀 스크립트</option>
         </select>
       </div>
       <div>
@@ -56,8 +52,23 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
-
     const allowedEmail = "skyhk1202@naver.com";
+
+    const characterData = {
+      "트러블 브루잉": [
+        "세탁부", "사서", "조사관", "요리사", "공감능력자", "점쟁이", "장의사", "수도승", "레이븐키퍼", "처녀", "슬레이어", "군인", "시장",
+        "집사", "주정뱅이", "은둔자", "성자", "독살범", "스파이", "부정한여자", "남작", "임프"
+      ],
+      "섹츠앤바이올렛": [
+        "시계공", "몽상가", "뱀조련사", "수학자", "꽃파는소녀", "포고꾼", "오라클", "학자", "재봉사", "철학자", "예술가", "저글러", "현자",
+        "돌연변이", "연인", "이발사", "모지리", "사악한쌍둥이", "마녀", "세레노부스", "피트핵", "팡구", "비고모르티스", "노다시", "볼텍스"
+      ],
+      "배드문라이징": [
+        "할머니", "선원", "하녀", "퇴마사", "여관주인", "도박꾼", "험담꾼", "대신", "교수", "음유시인", "찻집여인", "평화주의자", "광대",
+        "땜장이", "문차일드", "깡패", "미치광이", "대부", "악마의대변인", "암살자", "배후인물", "좀부울", "푸카", "샤발롯", "포"
+      ]
+    };
+
     auth.onAuthStateChanged((user) => {
       if (!user || user.email !== allowedEmail) {
         alert("관리자만 접근할 수 있습니다.");
@@ -65,7 +76,41 @@
       }
     });
 
-    document.getElementById('gameForm').addEventListener('submit', async function (e) {
+    function updatePlayerInputs(count) {
+      const scenario = document.getElementById("scenario").value;
+      const characters = characterData[scenario] || [];
+      const container = document.getElementById("playerInputs");
+      container.innerHTML = "";
+
+      for (let i = 0; i < count; i++) {
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <div class="p-3 bg-gray-50 rounded shadow">
+            <h3 class="font-semibold mb-2">플레이어 ${i + 1}</h3>
+            <input type="text" name="player${i}_name" placeholder="이름" class="w-full border rounded p-2 mb-2" required>
+            <select name="player${i}_character" class="w-full border rounded p-2 mb-2" required>
+              <option value="">캐릭터 선택</option>
+              ${characters.map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+            <select name="player${i}_win" class="w-full border rounded p-2 mb-2" required>
+              <option value="승리">승리</option>
+              <option value="패배">패배</option>
+            </select>
+          </div>
+        `;
+        container.appendChild(div);
+      }
+    }
+
+    document.getElementById("playerCount").addEventListener("change", () => {
+      updatePlayerInputs(parseInt(document.getElementById("playerCount").value));
+    });
+
+    document.getElementById("scenario").addEventListener("change", () => {
+      updatePlayerInputs(parseInt(document.getElementById("playerCount").value));
+    });
+
+    document.getElementById("gameForm").addEventListener("submit", async function (e) {
       e.preventDefault();
 
       const date = e.target.date.value;
@@ -77,10 +122,8 @@
         const name = e.target[`player${i}_name`]?.value;
         const character = e.target[`player${i}_character`]?.value;
         const win = e.target[`player${i}_win`]?.value;
-        const team = e.target[`player${i}_team`] ? e.target[`player${i}_team`].value : null;
-        const role = e.target[`player${i}_role`] ? e.target[`player${i}_role`].value : null;
 
-        players.push({ name, character, team, role, win });
+        players.push({ name, character, win });
       }
 
       await db.collection("games").add({
@@ -92,7 +135,11 @@
 
       alert('데이터가 Firebase에 저장되었습니다!');
       e.target.reset();
+      updatePlayerInputs(5);
     });
+
+    // 초기화
+    updatePlayerInputs(5);
   </script>
 </body>
 </html>
