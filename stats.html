@@ -1,19 +1,20 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>전체 통계</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<meta charset="UTF-8">
+<title>전체 통계</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-800">
-  <div class="max-w-5xl mx-auto p-6">
-    <h1 class="text-2xl font-bold text-center mb-6">📊 전체 통계</h1>
+  <div class="max-w-5xl mx-auto p-8">
+    <h1 class="text-4xl font-extrabold text-center mb-8">📊 전체 통계</h1>
 
-    <div class="text-center mb-4">
-      <label class="font-semibold mr-2">시나리오 선택:</label>
-      <select id="scenarioFilter" class="border p-2 rounded">
+    <div class="flex justify-center items-center gap-4 mb-6">
+      <label class="text-2xl font-semibold">시나리오 선택:</label>
+      <select id="scenarioFilter" class="border p-3 rounded text-2xl">
         <option value="all">전체</option>
         <option value="트러블 브루잉">트러블 브루잉</option>
         <option value="섹츠앤바이올렛">섹츠앤바이올렛</option>
@@ -24,114 +25,91 @@
       </select>
     </div>
 
-    <div id="summary" class="space-y-4 text-center text-xl"></div>
-    <div class="mt-8 text-center">
-      <a href="index.html" class="text-blue-500 hover:underline">← 홈으로 돌아가기</a>
+    <div id="summary" class="space-y-6 text-center text-2xl"></div>
+
+    <div class="mt-10 text-center">
+      <a href="index.html" class="text-blue-500 hover:underline text-2xl">← 홈으로 돌아가기</a>
     </div>
   </div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCqk52hH5uwWvC8L81l8d6kZgCN2Ynt_Rg",
-      authDomain: "blood-on-the-clock-tower-613ce.firebaseapp.com",
-      projectId: "blood-on-the-clock-tower-613ce",
-      storageBucket: "blood-on-the-clock-tower-613ce.firebasestorage.app",
-      messagingSenderId: "619177302977",
-      appId: "1:619177302977:web:3b282744ff5b00469e6d40"
-    };
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCqk52hH5uwWvC8L81l8d6kZgCN2Ynt_Rg",
+  authDomain: "blood-on-the-clock-tower-613ce.firebaseapp.com",
+  projectId: "blood-on-the-clock-tower-613ce",
+  storageBucket: "blood-on-the-clock-tower-613ce.firebasestorage.app",
+  messagingSenderId: "619177302977",
+  appId: "1:619177302977:web:3b282744ff5b00469e6d40"
+};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore();
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+const demons=["임프","팡구","비고모르티스","노다시","볼텍스","좀부울","푸카","샤발롯","포"];
+const minions=["독살범","스파이","부정한여자","남작","사악한쌍둥이","마녀","세레노부스","피트핵"];
+const outsiders=["집사","주정뱅이","은둔자","성자","돌연변이","연인","이발사","모지리"];
+function getIcon(char){
+  if(demons.includes(char)) return "😈";
+  if(minions.includes(char)) return "🧟";
+  if(outsiders.includes(char)) return "🤡";
+  return "🧑‍🌾";
+}
 
-    const demons = ["임프", "팡구", "비고모르티스", "노다시", "볼텍스", "좀부울", "푸카", "샤발롯", "포", "크라켄", "칼립소", "루살카", "우미보즈", "클레오파트라", "한니발", "크라수스", "카이사르", "뮤츠"];
-    const minions = ["독살범", "스파이", "부정한여자", "남작", "사악한쌍둥이", "마녀", "세레노부스", "피트핵", "대부", "악마의대변인", "암살자", "배후인물", "신비여사제", "바다정령", "언데드해적", "살점포식자", "요부", "글리콘", "내장점술가", "조점관", "마자용", "질뻐기", "나옹", "붐볼"];
-    const outsiders = ["집사", "주정뱅이", "은둔자", "성자", "돌연변이", "연인", "이발사", "모지리", "땜장이", "문차일드", "깡패", "미치광이", "따개비", "인어", "코주부", "밀항자", "쌍둥이", "스파르타쿠스", "와인제조자", "불길한징조", "딱충이", "고오쓰", "잉어킹&갸라도스", "뮤"];
-    const townsfolk = []; // 생략. 전체 리스트는 서버에 존재하므로 축약
+function sortEntries(charWins){
+  return Object.entries(charWins).sort((a,b)=>{
+    const ar=a[1].win/a[1].total, br=b[1].win/b[1].total;
+    if(br!==ar) return br-ar;
+    if(b[1].win!==a[1].win) return b[1].win-a[1].win;
+    if(b[1].total!==a[1].total) return b[1].total-a[1].total;
+    return a[0].localeCompare(b[0]);
+  });
+}
 
-    function getRoleIcon(character) {
-      if (demons.includes(character)) return "😈";
-      if (minions.includes(character)) return "🧟";
-      if (outsiders.includes(character)) return "🤡";
-      return "🧑‍🌾"; // 마을주민 포함 못한 경우도 포함
-    }
+async function build(){
+  const scenario=document.getElementById("scenarioFilter").value;
+  const snap=await db.collection("games").get();
+  const games=snap.docs.map(d=>d.data()).filter(g=>scenario==="all"||g.scenario===scenario);
 
-    async function fetchStats() {
-      const scenario = document.getElementById("scenarioFilter").value;
-      const snapshot = await db.collection("games").get();
-      const allGames = snapshot.docs.map(doc => doc.data());
+  let charWins={}, teamWin={선:0,악:0};
 
-      const filteredGames = scenario === "all" ? allGames : allGames.filter(g => g.scenario === scenario);
+  games.forEach(g=>{
+    let good=false,evil=false;
+    g.players.forEach(p=>{
+      const c=p.character, win=p.win==="승리";
+      if(!charWins[c]) charWins[c]={win:0,total:0};
+      charWins[c].total++;
+      if(win) charWins[c].win++;
+      if(win){
+        if(demons.includes(c)||minions.includes(c)) evil=true; else good=true;
+      }
+    });
+    if(good&&!evil) teamWin["선"]++;
+    if(evil&&!good) teamWin["악"]++;
+  });
 
-      let charWins = {};
-      let teamWinCounter = { 선: 0, 악: 0 };
+  const summary=document.getElementById("summary");
+  summary.innerHTML="";
+  summary.appendChild(createP(`전체 게임 수: <strong>${games.length}</strong>`));
+  summary.appendChild(createP(`🧑‍🌾 <strong>선팀 승리:</strong> ${teamWin["선"]}`));
+  summary.appendChild(createP(`😈 <strong>악팀 승리:</strong> ${teamWin["악"]}`));
 
-      filteredGames.forEach(game => {
-        let hasEvilWin = false;
-        let hasGoodWin = false;
+  summary.appendChild(hr());
+  const h=document.createElement("h3");h.className="text-3xl font-bold";h.innerText="캐릭터별 승률";
+  summary.appendChild(h);
 
-        game.players.forEach(p => {
-          const char = p.character || "알 수 없음";
-          const win = p.win === "승리";
+  const list=document.createElement("ul");list.className="text-left inline-block";
+  sortEntries(charWins).forEach(([c,d],i)=>{
+    const pct=((d.win/d.total)*100).toFixed(1);
+    const li=document.createElement("li");
+    li.innerHTML=`<strong>${i+1}위.</strong> ${getIcon(c)} <strong>${c}</strong>: ${d.win}승 / ${d.total}전 (${pct}%)`;
+    list.appendChild(li);
+  });
+  summary.appendChild(list);
+}
+function createP(html){const p=document.createElement("p");p.innerHTML=html;return p;}
+function hr(){const h=document.createElement("hr");h.className="my-6";return h;}
 
-          if (!charWins[char]) charWins[char] = { win: 0, total: 0 };
-          charWins[char].total++;
-          if (win) charWins[char].win++;
-
-          if (win) {
-            if (demons.includes(char) || minions.includes(char)) hasEvilWin = true;
-            else hasGoodWin = true;
-          }
-        });
-
-        if (hasEvilWin && !hasGoodWin) teamWinCounter["악"]++;
-        else if (hasGoodWin && !hasEvilWin) teamWinCounter["선"]++;
-      });
-
-      const summary = document.getElementById("summary");
-      summary.innerHTML = `
-        <p>전체 게임 수: <strong>${filteredGames.length}</strong></p>
-        <p><strong>🧑‍🌾 선팀 승리:</strong> ${teamWinCounter["선"]}</p>
-        <p><strong>😈 악팀 승리:</strong> ${teamWinCounter["악"]}</p>
-        <hr class="my-4">
-        <h2 class="text-xl font-bold">캐릭터별 승률</h2>
-        <ul class="text-left inline-block">
-          ${Object.entries(charWins)
-            .sort((a, b) => b[1].total - a[1].total)
-            .
-    const sorted = Object.entries(charWins)
-      .sort((a, b) => {
-        const aRate = a[1].win / a[1].total;
-        const bRate = b[1].win / b[1].total;
-        if (bRate !== aRate) return bRate - aRate;
-        if (b[1].total !== a[1].total) return b[1].total - a[1].total;
-        return a[0].localeCompare(b[0]);
-      });
-
-    let prev = null;
-    let rank = 0;
-    let displayRank = 0;
-
-    return sorted.map(([char, data], i) => {
-      const rate = (data.win / data.total).toFixed(3);
-      const same = prev && prev.rate === rate && prev.total === data.total;
-      if (!same) displayRank = ++rank;
-      prev = { rate, total: data.total };
-
-      const emoji = getRoleIcon(char);
-      const pct = (rate * 100).toFixed(1);
-      return `<li><strong>${displayRank}위.</strong> ${emoji} <strong>${char}</strong>: ${data.win}승 / ${data.total}전 (${pct}%)</li>`;
-    }).join("");
-    
-              const rate = ((data.win / data.total) * 100).toFixed(1);
-              const icon = getRoleIcon(char);
-              return `<li><strong>${index + 1}위.</strong> ${icon} <strong>${char}</strong>: ${data.win}승 / ${data.total}전 (${rate}%)</li>`;
-            }).join("")}
-        </ul>
-      `;
-    }
-
-    document.getElementById("scenarioFilter").addEventListener("change", fetchStats);
-    window.onload = fetchStats;
-  </script>
+document.getElementById("scenarioFilter").addEventListener("change",build);
+window.onload=build;
+</script>
 </body>
 </html>
